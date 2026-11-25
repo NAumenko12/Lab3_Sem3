@@ -1,7 +1,9 @@
 #pragma once
 #include "../Node/tree_node.h"
-#include <fstream>
 #include "../serialization/serializable.h"
+
+class FileReader;
+class FileWriter;
 
 class Tree : public Serializable {
 private:
@@ -16,8 +18,8 @@ private:
     void DeleteRecurs(Node*& node, int chislo, bool& blackLost);
     void Clear(Node*& node);
     Node* CopyNode(const Node* node);
-    void SaveNode(ofstream& file, const Node* node) const;
-    void LoadNode(ifstream& file, Node*& node);
+    void SaveNode(FileWriter& file, const Node* node) const;
+    void LoadNode(FileReader& file, Node*& node);
     int CheckTree(const Node* node, const Node* lower, const Node* upper) const;
 
 public:

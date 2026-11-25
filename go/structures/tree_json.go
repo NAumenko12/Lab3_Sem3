@@ -45,11 +45,11 @@ func checkTree(node, lower, upper *Node) int {
 	return left + 1
 }
 func (tree *Tree) Save(filename string) error {
-	return saveJSON(filename, treeState{"tree", treeToRecord(tree.root)})
+	return saveState(filename, treeState{"tree", treeToRecord(tree.root)})
 }
 func (tree *Tree) Load(filename string) error {
 	var state treeState
-	if err := loadJSON(filename, &state); err != nil {
+	if err := loadState(filename, &state); err != nil {
 		return err
 	}
 	if state.Type != "tree" {

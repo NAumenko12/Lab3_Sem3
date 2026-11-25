@@ -25,7 +25,7 @@ int RunCuckoo(const string& filename, const string& command, istringstream& inpu
 
 void PrintHelp() {
     cout << "Запуск:\n";
-    cout << "./build/app --file файл.bin --query 'команда данные'\n\n";
+    cout << "./build/app --file файл.bin|файл.json --query 'команда данные'\n\n";
     cout << "Один файл хранит одну структуру. Сначала создайте его командой инициализации.\n";
     cout << "Повторная инициализация очищает выбранную структуру в файле.\n";
     cout << "Индексы начинаются с 0. Значения с пробелами заключайте в двойные кавычки.\n\n";

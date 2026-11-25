@@ -1,8 +1,7 @@
+#include "../serialization/file_archive.h"
 #include <stdexcept>
 #include "spisok1.h"
 #include <iostream>
-#include <fstream>
-#include <cstring>
 using namespace std;
 
 FList::FList() : head(nullptr) {}
@@ -242,64 +241,30 @@ FList& FList::operator=(const FList& other) {
 }
 
 void FList::Save(const string& filename) const {
-    ofstream file(filename, ios::binary);
-    if (!file) {
-        throw runtime_error("Ошибка открытия файла");
-    }
+    FileWriter file(filename, "flist");
     size_t count = 0;
     ListNode* node = head;
     while (node != nullptr) {
         ++count;
         node = node->next;
     }
-    char bytes[sizeof(size_t)];
-    memcpy(bytes, &count, sizeof(count));
-    file.write(bytes, sizeof(bytes));
+    file.WriteSize(count);
     node = head;
     while (node != nullptr) {
-        size_t length = node->chislo.size();
-        memcpy(bytes, &length, sizeof(length));
-        file.write(bytes, sizeof(bytes));
-        file.write(node->chislo.data(), length);
+        file.WriteString(node->chislo);
         node = node->next;
     }
-    file.close();
-    if (!file) {
-        throw runtime_error("Ошибка записи файла");
-    }
+    file.Finish();
 }
 
 void FList::Load(const string& filename) {
-    ifstream file(filename, ios::binary);
-    if (!file) {
-        throw runtime_error("Ошибка открытия файла");
-    }
-    char bytes[sizeof(size_t)];
-    if (!file.read(bytes, sizeof(bytes))) {
-        throw runtime_error("Ошибка чтения файла");
-    }
-    size_t count = 0;
-    memcpy(&count, bytes, sizeof(count));
+    FileReader file(filename, "flist");
+    size_t count = file.ReadSize();
     FList loaded;
     for (size_t i = 0; i < count; ++i) {
-        if (!file.read(bytes, sizeof(bytes))) {
-            throw runtime_error("Ошибка чтения длины строки");
-        }
-        size_t length = 0;
-        memcpy(&length, bytes, sizeof(length));
-        string value;
-        for (size_t j = 0; j < length; ++j) {
-            char c;
-            if (!file.get(c)) {
-                throw runtime_error("Ошибка чтения строки");
-            }
-            value += c;
-        }
-        loaded.FAddEnd(value);
+        loaded.FAddEnd(file.ReadString());
     }
-    if (file.peek() != char_traits<char>::eof() || file.bad()) {
-        throw runtime_error("Ошибка: лишние данные или ошибка чтения");
-    }
+    file.Finish();
     ListNode* old_head = head;
     head = loaded.head;
     loaded.head = old_head;

@@ -1,8 +1,7 @@
+#include "../serialization/file_archive.h"
 #include <stdexcept>
 #include "hesh_table.h"
 #include <utility>
-#include <fstream>
-#include <cstring>
 #include <climits>
 using namespace std;
 
@@ -197,53 +196,26 @@ HashTable& HashTable::operator=(const HashTable& other) {
 }
 
 void HashTable::Save(const string& filename) const {
-    ofstream file(filename, ios::binary);
-    if (!file) {
-        throw runtime_error("Ошибка открытия файла");
-    }
+    FileWriter file(filename, "hash");
     size_t count = size;
     size_t capacity = mesto;
-    char bytes[sizeof(size_t)];
-    memcpy(bytes, &count, sizeof(count));
-    file.write(bytes, sizeof(bytes));
-    memcpy(bytes, &capacity, sizeof(capacity));
-    file.write(bytes, sizeof(bytes));
+    file.WriteSize(count);
+    file.WriteSize(capacity);
     for (int i = 0; i < mesto; ++i) {
         HNode* node = data[i];
         while (node != nullptr) {
-            size_t length = node->key.size();
-            memcpy(bytes, &length, sizeof(length));
-            file.write(bytes, sizeof(bytes));
-            file.write(node->key.data(), length);
-            length = node->value.size();
-            memcpy(bytes, &length, sizeof(length));
-            file.write(bytes, sizeof(bytes));
-            file.write(node->value.data(), length);
+            file.WriteString(node->key);
+            file.WriteString(node->value);
             node = node->next;
         }
     }
-    file.close();
-    if (!file) {
-        throw runtime_error("Ошибка записи файла");
-    }
+    file.Finish();
 }
 
 void HashTable::Load(const string& filename) {
-    ifstream file(filename, ios::binary);
-    if (!file) {
-        throw runtime_error("Ошибка открытия файла");
-    }
-    char bytes[sizeof(size_t)];
-    size_t count = 0;
-    size_t capacity = 0;
-    if (!file.read(bytes, sizeof(bytes))) {
-        throw runtime_error("Ошибка чтения количества элементов");
-    }
-    memcpy(&count, bytes, sizeof(count));
-    if (!file.read(bytes, sizeof(bytes))) {
-        throw runtime_error("Ошибка чтения вместимости");
-    }
-    memcpy(&capacity, bytes, sizeof(capacity));
+    FileReader file(filename, "hash");
+    size_t count = file.ReadSize();
+    size_t capacity = file.ReadSize();
     if (count > capacity || capacity > INT_MAX) {
         throw runtime_error("Ошибка: неверный размер таблицы");
     }
@@ -252,30 +224,15 @@ void HashTable::Load(const string& filename) {
         loaded.HDestroy();
     }
     for (size_t i = 0; i < count; ++i) {
-        string entry[2];
-        for (int j = 0; j < 2; ++j) {
-            if (!file.read(bytes, sizeof(bytes))) {
-                throw runtime_error("Ошибка чтения длины строки");
-            }
-            size_t length = 0;
-            memcpy(&length, bytes, sizeof(length));
-            for (size_t k = 0; k < length; ++k) {
-                char c;
-                if (!file.get(c)) {
-                    throw runtime_error("Ошибка чтения строки");
-                }
-                entry[j] += c;
-            }
-        }
-        loaded.HInsert(entry[0], entry[1]);
+        string key = file.ReadString();
+        string value = file.ReadString();
+        loaded.HInsert(key, value);
     }
     size_t actual = loaded.HLength();
     if (actual != count) {
         throw runtime_error("Ошибка: повторяющиеся ключи в файле");
     }
-    if (file.peek() != char_traits<char>::eof() || file.bad()) {
-        throw runtime_error("Ошибка: лишние данные или ошибка чтения");
-    }
+    file.Finish();
     swap(data, loaded.data);
     swap(size, loaded.size);
     swap(mesto, loaded.mesto);

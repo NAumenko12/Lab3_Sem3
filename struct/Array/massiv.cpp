@@ -1,8 +1,7 @@
+#include "../serialization/file_archive.h"
 #include <stdexcept>
 #include "massiv.h"
 #include <utility>
-#include <fstream>
-#include <cstring>
 #include <climits>
 using namespace std;
 
@@ -140,44 +139,20 @@ Array& Array::operator=(const Array& other) {
     return *this;
 }
 void Array::Save(const string& filename) const {
-    ofstream file(filename, ios::binary);
-    if (!file) {
-        throw runtime_error("Ошибка открытия файла");
-    }
+    FileWriter file(filename, "array");
     size_t count = size;
     size_t capacity = mesto;
-    char bytes[sizeof(size_t)];
-    memcpy(bytes, &count, sizeof(count));
-    file.write(bytes, sizeof(bytes));
-    memcpy(bytes, &capacity, sizeof(capacity));
-    file.write(bytes, sizeof(bytes));
+    file.WriteSize(count);
+    file.WriteSize(capacity);
     for (int i = 0; i < size; ++i) {
-        size_t length = data[i].size();
-        memcpy(bytes, &length, sizeof(length));
-        file.write(bytes, sizeof(bytes));
-        file.write(data[i].data(), length);
+        file.WriteString(data[i]);
     }
-    file.close();
-    if (!file) {
-        throw runtime_error("Ошибка записи файла");
-    }
+    file.Finish();
 }
 void Array::Load(const string& filename) {
-    ifstream file(filename, ios::binary);
-    if (!file) {
-        throw runtime_error("Ошибка открытия файла");
-    }
-    char bytes[sizeof(size_t)];
-    size_t count = 0;
-    size_t capacity = 0;
-    if (!file.read(bytes, sizeof(bytes))) {
-        throw runtime_error("Ошибка чтения количества элементов");
-    }
-    memcpy(&count, bytes, sizeof(count));
-    if (!file.read(bytes, sizeof(bytes))) {
-        throw runtime_error("Ошибка чтения вместимости");
-    }
-    memcpy(&capacity, bytes, sizeof(capacity));
+    FileReader file(filename, "array");
+    size_t count = file.ReadSize();
+    size_t capacity = file.ReadSize();
     if (count > capacity || capacity > INT_MAX) {
         throw runtime_error("Ошибка: неверный размер массива");
     }
@@ -186,24 +161,9 @@ void Array::Load(const string& filename) {
         loaded.MDestroy();
     }
     for (size_t i = 0; i < count; ++i) {
-        if (!file.read(bytes, sizeof(bytes))) {
-            throw runtime_error("Ошибка чтения длины строки");
-        }
-        size_t length = 0;
-        memcpy(&length, bytes, sizeof(length));
-        string value;
-        for (size_t j = 0; j < length; ++j) {
-            char c;
-            if (!file.get(c)) {
-                throw runtime_error("Ошибка чтения строки");
-            }
-            value += c;
-        }
-        loaded.MAddEnd(value);
+        loaded.MAddEnd(file.ReadString());
     }
-    if (file.peek() != char_traits<char>::eof() || file.bad()) {
-        throw runtime_error("Ошибка: лишние данные или ошибка чтения");
-    }
+    file.Finish();
     swap(data, loaded.data);
     swap(size, loaded.size);
     swap(mesto, loaded.mesto);

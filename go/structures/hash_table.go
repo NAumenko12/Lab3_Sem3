@@ -170,11 +170,11 @@ func (table *HashTable) Save(filename string) error {
 			node = node.Next
 		}
 	}
-	return saveJSON(filename, state)
+	return saveState(filename, state)
 }
 func (table *HashTable) Load(filename string) error {
 	var state hashState
-	if err := loadJSON(filename, &state); err != nil {
+	if err := loadState(filename, &state); err != nil {
 		return err
 	}
 	if state.Type != "hash" || state.Capacity < len(state.Entries) || state.Capacity < 0 || state.Capacity > math.MaxInt32 {

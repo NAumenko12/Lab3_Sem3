@@ -1,7 +1,7 @@
+#include "../serialization/file_archive.h"
 #include <stdexcept>
 #include "black_red_tree.h"
 #include <iostream>
-#include <cstring>
 using namespace std;
 
 Tree::Tree() : root(nullptr) {}
@@ -282,79 +282,39 @@ Tree& Tree::operator=(const Tree& other) {
     return *this;
 }
 
-void Tree::SaveNode(ofstream& file, const Node* node) const {
-    if (!file) {
-        return;
-    }
+void Tree::SaveNode(FileWriter& file, const Node* node) const {
+    file.WriteFlag(node != nullptr);
     if (node == nullptr) {
-        file.put('0');
         return;
     }
-    file.put('1');
-    char bytes[sizeof(int)];
-    memcpy(bytes, &node->data, sizeof(int));
-    file.write(bytes, sizeof(bytes));
-    file.put(node->red ? '1' : '0');
+    file.WriteInt(node->data);
+    file.WriteFlag(node->red);
     SaveNode(file, node->left);
     SaveNode(file, node->right);
 }
 
 void Tree::Save(const string& filename) const {
-    ofstream file(filename, ios::binary);
-    if (!file) {
-        throw runtime_error("Ошибка открытия файла");
-    }
+    FileWriter file(filename, "tree");
     SaveNode(file, root);
-    file.close();
-    if (!file) {
-        throw runtime_error("Ошибка записи файла");
-    }
+    file.Finish();
 }
 
-void Tree::LoadNode(ifstream& file, Node*& node) {
-    if (!file) {
-        return;
-    }
-    char exists;
-    if (!file.get(exists)) {
-        return;
-    }
-    if (exists == '0') {
+void Tree::LoadNode(FileReader& file, Node*& node) {
+    if (!file.ReadFlag()) {
         node = nullptr;
         return;
     }
-    if (exists != '1') {
-        file.setstate(ios::failbit);
-        return;
-    }
-    char bytes[sizeof(int)];
-    if (!file.read(bytes, sizeof(bytes))) {
-        return;
-    }
-    int chislo = 0;
-    memcpy(&chislo, bytes, sizeof(chislo));
-    char color;
-    if (!file.get(color)) {
-        return;
-    }
-    if (color != '0' && color != '1') {
-        file.setstate(ios::failbit);
-        return;
-    }
-    node = new Node(chislo, color == '1');
+    int chislo = file.ReadInt();
+    bool red = file.ReadFlag();
+    node = new Node(chislo, red);
     LoadNode(file, node->left);
     LoadNode(file, node->right);
 }
 void Tree::Load(const string& filename) {
-    ifstream file(filename, ios::binary);
-    if (!file) {
-        throw runtime_error("Ошибка открытия файла");
-    }
+    FileReader file(filename, "tree");
     Tree loaded;
     LoadNode(file, loaded.root);
-    if (!file || file.peek() != char_traits<char>::eof() || file.bad()) {
-        throw runtime_error("Ошибка чтения дерева");
-    }
+    file.Finish();
     if ((loaded.root != nullptr && loaded.root->red) ||
         loaded.CheckTree(loaded.root, nullptr, nullptr) < 0) {
         throw runtime_error("Ошибка: нарушены свойства красно-чёрного дерева");

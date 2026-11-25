@@ -218,12 +218,12 @@ func (list *LList) Save(filename string) error {
 	for node := list.head; node != nil; node = node.Next {
 		values = append(values, node.Chislo)
 	}
-	return saveJSON(filename, listState{"llist", values})
+	return saveState(filename, listState{"llist", values})
 }
 
 func (list *LList) Load(filename string) error {
 	var state listState
-	if err := loadJSON(filename, &state); err != nil {
+	if err := loadState(filename, &state); err != nil {
 		return err
 	}
 	if state.Type != "llist" {

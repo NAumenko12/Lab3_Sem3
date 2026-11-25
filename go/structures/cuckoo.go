@@ -116,11 +116,11 @@ func (table *CuckooTable) Save(filename string) error {
 			state.Second[i] = cellState{table.second[i].key, true}
 		}
 	}
-	return saveJSON(filename, state)
+	return saveState(filename, state)
 }
 func (table *CuckooTable) Load(filename string) error {
 	var state cuckooState
-	if err := loadJSON(filename, &state); err != nil {
+	if err := loadState(filename, &state); err != nil {
 		return err
 	}
 	if state.Type != "cuckoo" || len(state.First) != 11 || len(state.Second) != 11 {

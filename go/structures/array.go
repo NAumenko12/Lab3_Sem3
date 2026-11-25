@@ -130,12 +130,12 @@ type arrayState struct {
 func (array *Array) Save(filename string) error {
 	values := make([]string, array.size)
 	copy(values, array.data[:array.size])
-	return saveJSON(filename, arrayState{"array", array.mesto, values})
+	return saveState(filename, arrayState{"array", array.mesto, values})
 }
 
 func (array *Array) Load(filename string) error {
 	var state arrayState
-	if err := loadJSON(filename, &state); err != nil {
+	if err := loadState(filename, &state); err != nil {
 		return err
 	}
 	if state.Type != "array" || state.Capacity < len(state.Values) || state.Capacity < 0 || state.Capacity > math.MaxInt32 {

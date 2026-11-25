@@ -108,7 +108,19 @@ C++ сохраняет данные в бинарном формате. При �
 Хеш-стратегии копируются через `Clone`, но в файл не записываются. При загрузке
 кукушкиной таблицы должны использоваться те же стратегии, что и при сохранении.
 
-Файлы C++ и Go не взаимозаменяемы: Go использует текстовый JSON.
+Обе версии читают и записывают бинарные файлы и JSON. В C++ расширение
+`.json` выбирает JSON, остальные имена используют исходный бинарный формат.
+JSON C++ содержит имя типа и массив полей в порядке записи. В Go расширение
+`.bin` выбирает двоичный формат `encoding/gob` с заголовком `LR3G` и байтом
+версии 1, остальные имена используют исходный JSON. Форматы двух версий
+самостоятельные. Ранее созданный в Go JSON-файл с именем `.bin` читается и
+при сохранении записывается в бинарном формате. Стек и очередь используют формат списка, на котором построены.
+
+```bash
+./build/app --file stack.json --query 'SInitStack'
+./build/app --file stack.json --query 'SPush "hello world"'
+./build/app --file stack.json --query 'STop'
+```
 
 ## Тесты
 
@@ -184,9 +196,9 @@ make lint
 ```bash
 cd go
 make build
-./build/lab3go --file stack.json --query 'SInitStack'
-./build/lab3go --file stack.json --query 'SPush 10'
-./build/lab3go --file stack.json --query 'STop'
+./build/lab3go --file stack.bin --query 'SInitStack'
+./build/lab3go --file stack.bin --query 'SPush 10'
+./build/lab3go --file stack.bin --query 'STop'
 make test
 make bench
 make gcov_report

@@ -208,12 +208,12 @@ func (list *FList) Save(filename string) error {
 	for node := list.head; node != nil; node = node.Next {
 		values = append(values, node.Chislo)
 	}
-	return saveJSON(filename, listState{"flist", values})
+	return saveState(filename, listState{"flist", values})
 }
 
 func (list *FList) Load(filename string) error {
 	var state listState
-	if err := loadJSON(filename, &state); err != nil {
+	if err := loadState(filename, &state); err != nil {
 		return err
 	}
 	if state.Type != "flist" {

@@ -1,8 +1,7 @@
+#include "../serialization/file_archive.h"
 #include <stdexcept>
 #include "cuckoo_table.h"
 #include <iostream>
-#include <fstream>
-#include <cstring>
 #include <utility>
 using namespace std;
 
@@ -109,62 +108,29 @@ CuckooTable& CuckooTable::operator=(const CuckooTable& other) {
 }
 
 void CuckooTable::Save(const string& filename) const {
-    ofstream file(filename, ios::binary);
-    if (!file) {
-        throw runtime_error("Ошибка открытия файла");
-    }
-    char bytes[sizeof(size_t)];
+    FileWriter file(filename, "cuckoo");
     for (int table_index = 0; table_index < 2; ++table_index) {
         for (int i = 0; i < 11; ++i) {
             const CuckooCell& cell = table_index == 0 ? first[i] : second[i];
-            file.put(cell.used ? '1' : '0');
+            file.WriteFlag(cell.used);
             if (!cell.used) {
                 continue;
             }
-            size_t length = cell.key.size();
-            memcpy(bytes, &length, sizeof(length));
-            file.write(bytes, sizeof(bytes));
-            file.write(cell.key.data(), length);
+            file.WriteString(cell.key);
         }
     }
-    file.close();
-    if (!file) {
-        throw runtime_error("Ошибка записи файла");
-    }
+    file.Finish();
 }
 
 void CuckooTable::Load(const string& filename) {
-    ifstream file(filename, ios::binary);
-    if (!file) {
-        throw runtime_error("Ошибка открытия файла");
-    }
+    FileReader file(filename, "cuckoo");
     CuckooTable loaded(firstHash->Clone(), secondHash->Clone());
-    char bytes[sizeof(size_t)];
     for (int table_index = 0; table_index < 2; ++table_index) {
         for (int i = 0; i < 11; ++i) {
-            char used;
-            if (!file.get(used)) {
-                throw runtime_error("Ошибка чтения ячейки");
-            }
-            if (used == '0') {
+            if (!file.ReadFlag()) {
                 continue;
             }
-            if (used != '1') {
-                throw runtime_error("Ошибка: неверная отметка ячейки");
-            }
-            if (!file.read(bytes, sizeof(bytes))) {
-                throw runtime_error("Ошибка чтения длины ключа");
-            }
-            size_t length = 0;
-            memcpy(&length, bytes, sizeof(length));
-            string key;
-            for (size_t j = 0; j < length; ++j) {
-                char c;
-                if (!file.get(c)) {
-                    throw runtime_error("Ошибка чтения ключа");
-                }
-                key += c;
-            }
+            string key = file.ReadString();
             int index = table_index == 0 ? loaded.CHash1(key) : loaded.CHash2(key);
             if (index != i) {
                 throw runtime_error("Ошибка: ключ не подходит выбранной хеш-функции");
@@ -179,9 +145,7 @@ void CuckooTable::Load(const string& filename) {
             cell.used = true;
         }
     }
-    if (file.peek() != char_traits<char>::eof() || file.bad()) {
-        throw runtime_error("Ошибка: лишние данные или ошибка чтения");
-    }
+    file.Finish();
     swap(first, loaded.first);
     swap(second, loaded.second);
     swap(firstHash, loaded.firstHash);
